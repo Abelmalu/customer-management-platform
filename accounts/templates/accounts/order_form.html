@@ -1,0 +1,11 @@
+{% extends 'accounts/main.html' %}
+
+{% block content %}
+
+<h1>welcome to the order form </h1>
+<form action="" method="post">
+    {% csrf_token %}
+      {{form}}
+    <input type="submit" name="submit">
+</form>
+{% endblock %}
