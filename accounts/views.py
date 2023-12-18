@@ -1,6 +1,10 @@
 from django.shortcuts import render, redirect
 from . models import *
 from .forms import OrderForm
+from .filters import OrderFilter
+from django.contrib.auth.forms import UserCreationForm,AuthenticationForm
+from django.contrib.auth import login,logout
+
 
 # Create your views here.
 
@@ -32,19 +36,27 @@ def customer(request,pk_test):
     customer=Customer.objects.get(id=pk_test)
     orders=customer.order_set.all()
     total_orders=orders.count()
+    myFilter = OrderFilter(request.GET, queryset=orders)
+    orders=myFilter.qs
     context={
         'customer':customer,
         'orders':orders,
-        'total_orders':total_orders
+        'total_orders':total_orders,
+        'myFilter':myFilter
     }
     return render( request, 'accounts/customer.html',context)
 
 
-def createOrder(request):
+def createOrder(request,pk):
+    customer = Customer.objects.get(id=pk)
+    print(customer)
+
     if request.method == 'POST':
         form = OrderForm(request.POST)
         if form.is_valid():
-            form.save()
+            order=form.save(commit=False)
+            order.customer=customer
+            order.save()
 
             return redirect('accounts:home')
     else:
@@ -77,3 +89,42 @@ def deleteOrder(request,pk) :
           return redirect('accounts:home')
      context={'item':order}
      return render(request,"accounts/delete.html", context)
+
+
+def sign_up(request):
+   if request.method == 'POST':
+
+     form = UserCreationForm(request,request.POST)
+     if form.is_valid():
+          form.save()
+          return redirect('accounts:home')
+
+
+   else:
+        form = UserCreationForm()
+        context={
+         'form':form
+          }
+        return render(request,'accounts/sign_up.html',context)
+
+
+
+
+
+
+def login_view(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(request, request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            # Redirect to a success page.
+            return redirect('accounts:home') 
+    else:
+       form = AuthenticationForm()
+       context= {
+          'form':form
+            }
+       return render(request,'accounts/login.html',context)
+
+

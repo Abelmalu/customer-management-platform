@@ -1,0 +1,9 @@
+{% extends 'accounts/main.html '%}
+
+{% block content %}
+<form action="{% url 'accounts:sign_up' %}" method="post">
+    {% csrf_token %}
+    {{form.as_p}}
+    <input type="submit" value="singup">
+</form>
+{% endblock %}
