@@ -1,13 +1,15 @@
 from django.shortcuts import render, redirect
 from . models import *
-from .forms import OrderForm
+from .forms import *
 from .filters import OrderFilter
 from django.contrib.auth.forms import UserCreationForm,AuthenticationForm
 from django.contrib.auth import login,logout
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 
 
 # Create your views here.
-
+@login_required(login_url='accounts:login')
 def home(request):
     customers=Customer.objects.all()
     orders = Order.objects.all()
@@ -92,20 +94,27 @@ def deleteOrder(request,pk) :
 
 
 def sign_up(request):
+   if request.user.is_authenticated:
+       return redirect('accounts:home')
+   form = CreateUserForm()
    if request.method == 'POST':
 
-     form = UserCreationForm(request,request.POST)
+     form = CreateUserForm( request.POST)
      if form.is_valid():
           form.save()
-          return redirect('accounts:home')
+          user=form.cleaned_data.get('username')
+          messages.success(request,'account  created'+ user)
+          return redirect('accounts:login')
+     
 
 
-   else:
-        form = UserCreationForm()
-        context={
+  
+        
+   
+   context={
          'form':form
-          }
-        return render(request,'accounts/sign_up.html',context)
+              }
+   return render(request,'accounts/sign_up.html',context)
 
 
 
@@ -113,18 +122,31 @@ def sign_up(request):
 
 
 def login_view(request):
-    if request.method == 'POST':
-        form = AuthenticationForm(request, request.POST)
-        if form.is_valid():
+    if request.user.is_authenticated:
+        return redirect('accounts:home')
+    else:
+        if request.method == 'POST':
+          
+          form = AuthenticationForm(request, request.POST)
+          if form.is_valid():
             user = form.get_user()
             login(request, user)
             # Redirect to a success page.
             return redirect('accounts:home') 
-    else:
-       form = AuthenticationForm()
-       context= {
+          else:
+             messages.info(request, 'password or username incorrect')
+    
+    form = AuthenticationForm()
+    context= {
           'form':form
             }
-       return render(request,'accounts/login.html',context)
+    return render(request,'accounts/login.html',context)
+
+
+def logout_view(request):
+     
+          logout(request)
+          return redirect('accounts:login')
+     
 
 
