@@ -6,10 +6,12 @@ from django.contrib.auth.forms import UserCreationForm,AuthenticationForm
 from django.contrib.auth import login,logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-
+from .decorators import *
+from django.contrib.auth.models import Group
 
 # Create your views here.
 @login_required(login_url='accounts:login')
+@admin_only
 def home(request):
     customers=Customer.objects.all()
     orders = Order.objects.all()
@@ -29,11 +31,16 @@ def home(request):
     return render(request,'accounts/dashboard.html',context)
 
 
+@login_required(login_url='accounts:login')
+@allowed_users(allowed_roles=['admin'])
 def products(request):
     products = Product.objects.all() 
     # context=products
     return render(request, 'accounts/products.html',{'products':products})
 
+
+@login_required(login_url='accounts:login')
+@allowed_users(allowed_roles=['admin'])
 def customer(request,pk_test): 
     customer=Customer.objects.get(id=pk_test)
     orders=customer.order_set.all()
@@ -93,15 +100,18 @@ def deleteOrder(request,pk) :
      return render(request,"accounts/delete.html", context)
 
 
+@unauthorized_users
 def sign_up(request):
-   if request.user.is_authenticated:
-       return redirect('accounts:home')
+  
    form = CreateUserForm()
    if request.method == 'POST':
 
      form = CreateUserForm( request.POST)
      if form.is_valid():
-          form.save()
+          user=form.save()
+          group = Group.objects.get(name='customer')
+          user.groups.add(group)
+
           user=form.cleaned_data.get('username')
           messages.success(request,'account  created'+ user)
           return redirect('accounts:login')
@@ -117,23 +127,18 @@ def sign_up(request):
    return render(request,'accounts/sign_up.html',context)
 
 
-
-
-
-
+@unauthorized_users
 def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('accounts:home')
-    else:
-        if request.method == 'POST':
+
+    if request.method == 'POST':
           
-          form = AuthenticationForm(request, request.POST)
-          if form.is_valid():
+        form = AuthenticationForm(request, request.POST)
+        if form.is_valid():
             user = form.get_user()
             login(request, user)
             # Redirect to a success page.
             return redirect('accounts:home') 
-          else:
+        else:
              messages.info(request, 'password or username incorrect')
     
     form = AuthenticationForm()
@@ -150,3 +155,7 @@ def logout_view(request):
      
 
 
+def userPage(request):
+     context={}
+
+     return render(request,'accounts/user.html', context)
